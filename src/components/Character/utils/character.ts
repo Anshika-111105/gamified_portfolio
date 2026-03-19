@@ -77,3 +77,4 @@ const setCharacter = (
 };
 
 export default setCharacter;
+
