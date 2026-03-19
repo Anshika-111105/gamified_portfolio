@@ -134,3 +134,4 @@ function LoopText(Text1: SplitText, Text2: SplitText) {
       1
     );
 }
+
