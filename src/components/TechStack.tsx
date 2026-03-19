@@ -48,10 +48,10 @@ function SphereGeo({
   const api = useRef<RapierRigidBody | null>(null);
 
   useFrame((_state, delta) => {
-    if (!isActive) return;
+    if (!isActive || !api.current) return;
     delta = Math.min(0.1, delta);
     const impulse = vec
-      .copy(api.current!.translation())
+      .copy(api.current.translation())
       .normalize()
       .multiply(
         new THREE.Vector3(
@@ -60,8 +60,7 @@ function SphereGeo({
           -50 * delta * scale
         )
       );
-
-    api.current?.applyImpulse(impulse, true);
+    api.current.applyImpulse(impulse, true);
   });
 
   return (
@@ -100,7 +99,7 @@ function Pointer({ vec = new THREE.Vector3(), isActive }: PointerProps) {
   const ref = useRef<RapierRigidBody>(null);
 
   useFrame(({ pointer, viewport }) => {
-    if (!isActive) return;
+    if (!isActive || !ref.current) return;
     const targetVec = vec.lerp(
       new THREE.Vector3(
         (pointer.x * viewport.width) / 2,
@@ -109,7 +108,7 @@ function Pointer({ vec = new THREE.Vector3(), isActive }: PointerProps) {
       ),
       0.2
     );
-    ref.current?.setNextKinematicTranslation(targetVec);
+    ref.current.setNextKinematicTranslation(targetVec);
   });
 
   return (
@@ -124,17 +123,96 @@ function Pointer({ vec = new THREE.Vector3(), isActive }: PointerProps) {
   );
 }
 
+// Fallback UI when WebGL is not available
+function WebGLFallback() {
+  return (
+    <div className="techstack-fallback">
+      <div className="tech-icons-grid">
+        {imageUrls.map((url, i) => (
+          <img key={i} src={url} alt="tech" className="tech-icon-img" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TechStackCanvas({
+  isActive,
+  materials,
+}: {
+  isActive: boolean;
+  materials: THREE.MeshPhysicalMaterial[];
+}) {
+  return (
+    <Canvas
+      shadows
+      gl={{ alpha: true, stencil: false, depth: true, antialias: false }}
+      camera={{ position: [0, 0, 20], fov: 32.5, near: 1, far: 100 }}
+      onCreated={(state) => {
+        state.gl.toneMappingExposure = 1.5;
+      }}
+      className="tech-canvas"
+    >
+      <ambientLight intensity={1} />
+      <spotLight
+        position={[20, 20, 25]}
+        penumbra={1}
+        angle={0.2}
+        color="white"
+        castShadow
+        shadow-mapSize={[512, 512]}
+      />
+      <directionalLight position={[0, 5, -4]} intensity={2} />
+      <Physics gravity={[0, 0, 0]}>
+        <Pointer isActive={isActive} />
+        {spheres.map((props, i) => (
+          <SphereGeo
+            key={i}
+            {...props}
+            material={materials[i % materials.length]}
+            isActive={isActive}
+          />
+        ))}
+      </Physics>
+      <Environment
+        files="/models/char_enviorment.hdr"
+        environmentIntensity={0.5}
+        environmentRotation={[0, 4, 2]}
+      />
+      <EffectComposer enableNormalPass={false}>
+        <N8AO color="#0f002c" aoRadius={2} intensity={1.15} />
+      </EffectComposer>
+    </Canvas>
+  );
+}
+
 const TechStack = () => {
   const [isActive, setIsActive] = useState(false);
+  const [webGLSupported, setWebGLSupported] = useState(true);
+
+  // Check WebGL support on mount
+  useEffect(() => {
+    try {
+      const canvas = document.createElement("canvas");
+      const gl =
+        canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      if (!gl) {
+        setWebGLSupported(false);
+      }
+    } catch {
+      setWebGLSupported(false);
+    }
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY || document.documentElement.scrollTop;
-      const threshold = document
-        .getElementById("work")!
-        .getBoundingClientRect().top;
+      // Safe null check — won't crash if #work doesn't exist
+      const workEl = document.getElementById("work");
+      const threshold = workEl ? workEl.getBoundingClientRect().top : 0;
       setIsActive(scrollY > threshold);
     };
+
     document.querySelectorAll(".header a").forEach((elem) => {
       const element = elem as HTMLAnchorElement;
       element.addEventListener("click", () => {
@@ -146,11 +224,13 @@ const TechStack = () => {
         }, 1000);
       });
     });
+
     window.addEventListener("scroll", handleScroll);
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
   const materials = useMemo(() => {
     return textures.map(
       (texture) =>
@@ -168,48 +248,14 @@ const TechStack = () => {
 
   return (
     <div className="techstack">
-      <h2> My Techstack</h2>
-
-      <Canvas
-        shadows
-        gl={{ alpha: true, stencil: false, depth: false, antialias: false }}
-        camera={{ position: [0, 0, 20], fov: 32.5, near: 1, far: 100 }}
-        onCreated={(state) => (state.gl.toneMappingExposure = 1.5)}
-        className="tech-canvas"
-      >
-        <ambientLight intensity={1} />
-        <spotLight
-          position={[20, 20, 25]}
-          penumbra={1}
-          angle={0.2}
-          color="white"
-          castShadow
-          shadow-mapSize={[512, 512]}
-        />
-        <directionalLight position={[0, 5, -4]} intensity={2} />
-        <Physics gravity={[0, 0, 0]}>
-          <Pointer isActive={isActive} />
-          {spheres.map((props, i) => (
-            <SphereGeo
-              key={i}
-              {...props}
-              material={materials[Math.floor(Math.random() * materials.length)]}
-              isActive={isActive}
-            />
-          ))}
-        </Physics>
-        <Environment
-          files="/models/char_enviorment.hdr"
-          environmentIntensity={0.5}
-          environmentRotation={[0, 4, 2]}
-        />
-        <EffectComposer enableNormalPass={false}>
-          <N8AO color="#0f002c" aoRadius={2} intensity={1.15} />
-        </EffectComposer>
-      </Canvas>
+      <h2>My Techstack</h2>
+      {webGLSupported ? (
+        <TechStackCanvas isActive={isActive} materials={materials} />
+      ) : (
+        <WebGLFallback />
+      )}
     </div>
   );
 };
 
 export default TechStack;
-
