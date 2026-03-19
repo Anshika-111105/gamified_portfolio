@@ -145,28 +145,7 @@ const WhatIDo = () => {
               </div>
               <div className="what-arrow"></div>
             </div>
-          </div>
-          <div className="what-corner"></div>
-            <div className="what-content-in">
-              <h3>AI & DATA SCIENCE</h3>
-              <h4>Applied Artificial Intelligence & Data Analytics</h4>
-              <p>
-                Turning Python scripts into production-ready predictive models bridging the gap
-                 between data and human interaction
-              </p>
-              <h5>Skillset & tools</h5>
-              <div className="what-content-flex">
-                <div className="what-tags">Python</div>
-                <div className="what-tags">Tensorflow</div>
-                <div className="what-tags">Pandas</div>
-                <div className="what-tags">NumPy</div>
-                <div className="what-tags">Jupyter Notebook</div>
-                <div className="what-tags">Generative AI (RAG, LangChain)</div>
-                <div className="what-tags">Data Visualization</div>
-                <div className="what-tags">Model Deployment</div>
-              </div>
-              <div className="what-arrow"></div>
-            </div>
+          </div> 
         </div>
       </div>
     </div>
